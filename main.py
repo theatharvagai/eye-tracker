@@ -7,6 +7,7 @@ Auto-Pause When Not Looking  –  Lightweight Edition
 • Optimised: low-res capture, frame skipping, minimal threading
 """
 
+import sys
 import tkinter as tk
 import threading
 import time
@@ -30,7 +31,15 @@ EYE_OPEN_THRESHOLD = 0.18   # EAR below this = eyes closed
 BLINK_FRAMES       = 3      # blink-grace before counting as "away"
 # ───────────────────────────────────────────────────────────────────
 
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "face_landmarker.task")
+# ── Resolve base directory correctly for both EXE and source runs ──
+# PyInstaller --onefile extracts to sys._MEIPASS at runtime;
+# __file__ alone is unreliable inside a frozen EXE.
+if getattr(sys, 'frozen', False):
+    _BASE_DIR = sys._MEIPASS          # extraction temp folder (bundled files live here)
+else:
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MODEL_PATH = os.path.join(_BASE_DIR, "face_landmarker.task")
 MODEL_URL  = (
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
     "face_landmarker/float16/1/face_landmarker.task"
@@ -47,8 +56,13 @@ def _ear(lm, vt, vb, hl, hr, W, H):
 
 
 def _download_model(status_cb):
+    # When frozen as EXE the model is bundled inside sys._MEIPASS — always present.
     if os.path.exists(MODEL_PATH):
         return True
+    # Source mode only: download if missing
+    if getattr(sys, 'frozen', False):
+        status_cb("Model not found in bundle — rebuild the EXE with build_exe.bat")
+        return False
     try:
         status_cb("Downloading face model…")
         def hook(count, blk, total):
