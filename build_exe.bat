@@ -3,7 +3,7 @@ title Building Auto-Pause EXE
 color 0B
 echo.
 echo  ============================================
-echo    Auto-Pause When Not Looking  –  EXE Build
+echo    Auto-Pause When Not Looking  --  EXE Build
 echo  ============================================
 echo.
 
@@ -21,18 +21,27 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo  [2/3] Building EXE (this takes ~1-2 minutes)...
+:: Clean any old build
+if exist build rmdir /s /q build
+if exist dist  rmdir /s /q dist
+if exist AutoPause.spec del /q AutoPause.spec
+
+echo  [2/3] Building EXE (this takes 2-4 minutes - mediapipe is large)...
 echo.
 
+:: IMPORTANT: --collect-all mediapipe is required.
+:: --hidden-import alone does NOT bundle mediapipe's internal .so/.pyd
+:: binary extensions, tflite models, and protobuf descriptors.
 "%PYTHON%" -m PyInstaller ^
     --onefile ^
     --windowed ^
     --name "AutoPause" ^
     --add-data "face_landmarker.task;." ^
-    --hidden-import mediapipe ^
-    --hidden-import cv2 ^
+    --collect-all mediapipe ^
+    --collect-all cv2 ^
     --hidden-import pyautogui ^
     --hidden-import numpy ^
+    --hidden-import tkinter ^
     --noconfirm ^
     main.py
 
@@ -49,7 +58,10 @@ echo.
 echo  EXE is at:  dist\AutoPause.exe
 echo.
 echo  Double-click dist\AutoPause.exe to run.
-echo  The floating bar will appear at the top of your screen.
-echo  Click the X on the bar to close and exit.
+echo  The floating bar appears at the top-centre of your screen.
+echo  Press the play button to start tracking.
+echo  Click X on the bar to close and exit.
+echo.
+echo  If something goes wrong, check:  dist\autopause_error.log
 echo.
 pause
